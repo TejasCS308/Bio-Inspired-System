@@ -1,0 +1,67 @@
+import numpy as np
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split, cross_val_score from sklearn.datasets import load_iris
+#APPLICATION
+
+# Objective function: Minimize 1 - accuracy of SVM def svm_fitness(params, X, y):
+C, gamma = params
+C = max(0.01, C)	# Ensure C is positive
+gamma = max(0.01, gamma)	# Ensure gamma is positive model = SVC(C=C, gamma=gamma)
+scores = cross_val_score(model, X, y, cv=5)	# 5-fold cross-validation return 1 - scores.mean()	# Minimize (1 - accuracy)
+
+# GWO Algorithm
+class GreyWolfOptimizer:
+def   init  (self, func, dim, bounds, n_wolves=10, max_iter=50): self.func = func
+self.dim = dim
+self.bounds = bounds
+self.n_wolves = n_wolves self.max_iter = max_iter
+self.alpha_pos = np.zeros(dim) self.beta_pos = np.zeros(dim) self.delta_pos = np.zeros(dim)
+self.alpha_score = float("inf") self.beta_score = float("inf") self.delta_score = float("inf")
+self.positions = np.random.uniform(bounds[:, 0], bounds[:, 1], (n_wolves,
+dim))
+
+def optimize(self, *args):
+for iter in range(self.max_iter): for i in range(self.n_wolves):
+# Fitness evaluation
+fitness = self.func(self.positions[i], *args)
+
+# Update alpha, beta, delta
+if fitness < self.alpha_score:
+self.alpha_score, self.alpha_pos = fitness, self.positions[i].copy()
+elif fitness < self.beta_score:
+self.beta_score, self.beta_pos = fitness, self.positions[i].copy()
+elif fitness < self.delta_score:
+ 
+self.delta_score, self.positions[i] = fitness, self.positions[i].copy()
+
+# Update positions
+a = 2 - iter * (2 / self.max_iter) for i in range(self.n_wolves):
+for d in range(self.dim):
+r1, r2 = np.random.rand(), np.random.rand() A1, C1 = 2 * a * r1 - a, 2 * r2
+D_alpha = abs(C1 * self.alpha_pos[d] - self.positions[i][d])
+X1 = self.alpha_pos[d] - A1 * D_alpha
+
+r1, r2 = np.random.rand(), np.random.rand() A2, C2 = 2 * a * r1 - a, 2 * r2
+D_beta = abs(C2 * self.beta_pos[d] - self.positions[i][d])
+X2 = self.beta_pos[d] - A2 * D_beta
+
+r1, r2 = np.random.rand(), np.random.rand() A3, C3 = 2 * a * r1 - a, 2 * r2
+D_delta = abs(C3 * self.delta_pos[d] - self.positions[i][d])
+X3 = self.delta_pos[d] - A3 * D_delta
+self.positions[i][d] = (X1 + X2 + X3) / 3 # Ensure positions are within bounds
+self.positions[i] = np.clip(self.positions[i], self.bounds[:, 0], self.bounds[:, 1])
+
+print(f"Iteration {iter + 1}: Best Fitness = {self.alpha_score}") return self.alpha_score, self.alpha_pos
+# Load dataset data = load_iris()
+X, y = data.data, data.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define bounds for C and gamma
+bounds = np.array([[0.01, 100], [0.01, 1]])	# C and gamma bounds
+
+# Run GWO
+optimizer = GreyWolfOptimizer(func=svm_fitness, dim=2, bounds=bounds, max_iter=30) best_score, best_params = optimizer.optimize(X_train, y_train)
+
+# Train and test the final model best_C, best_gamma = best_params
+ 
+ 
