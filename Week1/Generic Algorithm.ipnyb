@@ -1,0 +1,65 @@
+# Generic algorithm -Portfolio Optimization import numpy as np
+import random
+
+# Example data: expected returns and covariance matrix for assets EXPECTED_RETURNS = [0.12, 0.18, 0.10, 0.07, 0.15]	# Annual returns COVARIANCE_MATRIX = [
+[0.04,	0.02,	0.01,	0.03,	0.02],
+[0.02,	0.05,	0.02,	0.01,	0.03],
+[0.01,	0.02,	0.03,	0.02,	0.01],
+[0.03,	0.01,	0.02,	0.06,	0.04],
+[0.02,	0.03,	0.01,	0.04,	0.07]
+]
+BUDGET = 1.0	# Total budget (e.g., 100% allocation) NUM_ASSETS = len(EXPECTED_RETURNS)
+POPULATION_SIZE = 50
+NUM_GENERATIONS = 100
+MUTATION_RATE = 0.1
+
+# Generate a random portfolio (chromosome) def generate_chromosome():
+allocations = np.random.dirichlet(np.ones(NUM_ASSETS), size=1)[0] return allocations
+
+# Fitness function: Sharpe Ratio = (Return - Risk-Free Rate) / Risk def fitness(chromosome, risk_free_rate=0.03):
+portfolio_return = np.dot(chromosome, EXPECTED_RETURNS)
+portfolio_variance = np.dot(chromosome, np.dot(COVARIANCE_MATRIX, chromosome)) portfolio_risk = np.sqrt(portfolio_variance)
+sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_risk return sharpe_ratio
+
+# Selection: Roulette wheel selection
+def select_population(population, fitness_scores): total_fitness = sum(fitness_scores)
+probabilities = [score / total_fitness for score in fitness_scores] selected = random.choices(population, probabilities, k=POPULATION_SIZE) return selected
+
+# Crossover: Single-point crossover def crossover(parent1, parent2):
+point = random.randint(1, NUM_ASSETS - 1)
+child = np.concatenate((parent1[:point], parent2[point:]))
+return child / sum(child)	# Normalize to ensure budget constraint # Mutation: Small random change in allocation
+ 
+def mutate(chromosome):
+if random.random() < MUTATION_RATE:
+idx = random.randint(0, NUM_ASSETS - 1) change = random.uniform(-0.05, 0.05) chromosome[idx] += change
+chromosome = np.clip(chromosome, 0, 1)	# Ensure allocations are between 0
+and 1
+chromosome /= sum(chromosome)	# Normalize
+return chromosome
+
+# Genetic Algorithm
+def genetic_algorithm():
+population = [generate_chromosome() for _ in range(POPULATION_SIZE)] for generation in range(NUM_GENERATIONS):
+fitness_scores = [fitness(chromo) for chromo in population]
+print(f"Generation {generation}, Best fitness: {max(fitness_scores)}") if max(fitness_scores) > 2:	# Stop if high Sharpe Ratio is found
+break
+population = select_population(population, fitness_scores) next_generation = []
+for i in range(0, POPULATION_SIZE, 2):
+parent1, parent2 = population[i], population[i + 1]
+child1, child2 = crossover(parent1, parent2), crossover(parent2,
+parent1)
+next_generation.extend([mutate(child1), mutate(child2)])
+population = next_generation
+return max(population, key=fitness)
+
+# Run the Genetic Algorithm best_portfolio = genetic_algorithm()
+print("Best portfolio allocations:", best_portfolio)
+print("Expected portfolio return:", np.dot(best_portfolio, EXPECTED_RETURNS))
+print("Portfolio risk:", np.sqrt(np.dot(best_portfolio, np.dot(COVARIANCE_MATRIX, best_portfolio))))
+
+
+# Chromosome: Represents the proportion of budget allocated to each asset.
+# Fitness Function: Uses the Sharpe Ratio to measure the trade-off between risk and return.
+# Constraints: Allocations are normalized to ensure the total budget is respected. # Crossover: Merges two parent portfolios to create a new portfolio.
+# Mutation: Randomly tweaks allocations to explore more solutions.
