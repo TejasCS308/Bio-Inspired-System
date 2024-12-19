@@ -1,0 +1,58 @@
+import numpy as np
+
+# Initialize distance matrix with integers
+
+dist_matrix = np.array([[0,	2,	2,	1,	1],
+[2,	0,	2,	1,	3],
+[2,	2,	0,	1,	1],
+[1,	1,	1,	0,	2],
+[1,	3,	1,	2,	0]])
+
+# Convert dist_matrix to float64 to prevent type mismatch when adding np.eye() dist_matrix = dist_matrix.astype(np.float64)
+# Add a small value to the diagonal to ensure no zero distances
+dist_matrix += np.eye(dist_matrix.shape[0])	# Set diagonal to a non-zero value # Initialize pheromone matrix with lower initial values
+pheromone = np.ones(dist_matrix.shape) * 0.1	# Starting with a smaller pheromone value
+# Parameters for the ACO (Ant Colony Optimization) num_ants = 5	# Number of ants
+iterations = 100	# Number of iterations alpha = 1.0	# Influence of pheromone
+beta = 2.0	# Influence of distance (heuristic information)
+evaporation_rate = 0.3	# Moderate evaporation rate to keep pheromones for a while Q = 10	# Moderate constant for pheromone update
+# Function to compute the probability of moving to a particular city
+def calculate_probability(ant_position, pheromone, dist_matrix, alpha, beta): pheromone_values = pheromone[ant_position]
+distance_values = dist_matrix[ant_position] pheromone_factor = pheromone_values ** alpha distance_factor = (1.0 / distance_values) ** beta probability = pheromone_factor * distance_factor
+probability /= probability.sum()	# Normalize to make sure the probabilities sum to 1
+return probability
+# Function to update pheromones after each iteration
+def update_pheromones(pheromone, ants_paths, dist_matrix, evaporation_rate, Q): pheromone *= (1 - evaporation_rate)	# Apply pheromone evaporation
+for path in ants_paths:
+# Update pheromone on all edges in the path (including returning to start) for i in range(len(path) - 1):
+pheromone[path[i], path[i + 1]] += Q / dist_matrix[path[i], path[i +
+1]]
+pheromone[path[-1], path[0]] += Q / dist_matrix[path[-1], path[0]]	# Add
+pheromone for returning to the start # ACO algorithm
+def ant_colony_optimization(dist_matrix, pheromone, num_ants, iterations, alpha, beta, evaporation_rate, Q):
+ 
+best_path = None best_path_length = float('inf')
+for iteration in range(iterations): ants_paths = []
+for ant in range(num_ants):
+path = [0]	# Start from the first city (0-indexed) visited = set(path)
+while len(path) < len(dist_matrix): current_position = path[-1]
+probability = calculate_probability(current_position, pheromone, dist_matrix, alpha, beta)
+
+# Choose next city based on probabilities
+next_city = np.random.choice(len(dist_matrix), p=probability) if next_city not in visited:
+path.append(next_city) visited.add(next_city)
+
+path.append(path[0])	# Ensure the ant returns to the starting city ants_paths.append(path)
+# Update pheromones after ants' paths are determined update_pheromones(pheromone, ants_paths, dist_matrix, evaporation_rate, Q) # Find the best path in the current iteration
+for path in ants_paths:
+path_length = sum(dist_matrix[path[i], path[i + 1]] for i in range(len(path) - 1))
+if path_length < best_path_length: best_path_length = path_length best_path = path
+
+return best_path, best_path_length
+
+# Run the ACO algorithm
+best_path, best_path_length = ant_colony_optimization(dist_matrix, pheromone, num_ants, iterations, alpha, beta, evaporation_rate, Q)
+
+# Output the final results
+print(f"\nBest path found: {best_path}")
+print(f"Length of best path: {best_path_length}")
